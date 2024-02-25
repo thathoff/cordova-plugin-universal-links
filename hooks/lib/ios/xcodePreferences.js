@@ -9,6 +9,10 @@ Which is:
 var path = require('path');
 var compare = require('node-version-compare');
 var ConfigXmlHelper = require('../configXmlHelper.js');
+const xcode = require('xcode');
+const fileSystem = require('fs');
+const glob = require('glob');
+const shelljs = require('shelljs');
 var IOS_DEPLOYMENT_TARGET = '8.0';
 var COMMENT_KEY = /_comment$/;
 var context;
@@ -133,26 +137,68 @@ function isPbxReferenceAlreadySet(fileReferenceSection, entitlementsRelativeFile
  * @return {Object} projectFile - project file information
  */
 function loadProjectFile() {
-    var platform_ios;
-    var projectFile;
+  var platform_ios;
+  var projectFile;
+
+  try {
+    // try pre-5.0 cordova structure
+    platform_ios = context.requireCordovaModule(
+      'cordova-lib/src/plugman/platforms',
+    ).ios;
+
+    projectFile = platform_ios.parseProjectFile(iosPlatformPath());
+  } catch (e) {
     try {
-        // try pre-5.0 cordova structure
-        platform_ios = context.requireCordovaModule('cordova-lib/src/plugman/platforms')['ios'];
-        projectFile = platform_ios.parseProjectFile(iosPlatformPath());
+      // let's try cordova 5.0 structure
+      platform_ios = context.requireCordovaModule('ios');
+      projectFile = platform_ios.parseProjectFile(iosPlatformPath());
     } catch (e) {
-        try {
-            // let's try cordova 5.0 structure
-            platform_ios = context.requireCordovaModule('cordova-lib/src/plugman/platforms/ios');
-            projectFile = platform_ios.parse(iosPlatformPath());
-        } catch (e) {
-            // try cordova 7.0 structure
-            var iosPlatformApi = require(path.join(iosPlatformPath(), '/cordova/Api'));
-            var projectFileApi = require(path.join(iosPlatformPath(), '/cordova/lib/projectFile.js'));
-            var locations = (new iosPlatformApi()).locations;
-            projectFile = projectFileApi.parse(locations);
-        }
+      // Then cordova 7.0
+      const project_files = glob.sync(
+        path.join(iosPlatformPath(), '*.xcodeproj', 'project.pbxproj'),
+      );
+
+      if (project_files.length === 0) {
+        throw new Error(
+          'does not appear to be an xcode project (no xcode project file)',
+        );
+      }
+
+      const pbxPath = project_files[0];
+
+      const xcodeproj = xcode.project(pbxPath);
+      xcodeproj.parseSync();
+
+      projectFile = {
+        xcode: xcodeproj,
+        write() {
+          const fs = fileSystem;
+
+          const frameworks_file = path.join(
+            iosPlatformPath(),
+            'frameworks.json',
+          );
+          let frameworks = {};
+          try {
+            frameworks = context.requireCordovaModule(frameworks_file);
+          } catch (e) {}
+
+          fs.writeFileSync(pbxPath, xcodeproj.writeSync());
+          if (Object.keys(frameworks).length === 0) {
+            // If there is no framework references remain in the project, just remove this file
+            shelljs.rm('-rf', frameworks_file);
+            return;
+          }
+          fs.writeFileSync(
+            frameworks_file,
+            JSON.stringify(this.frameworks, null, 4),
+          );
+        },
+      };
     }
-    return projectFile;
+  }
+
+  return projectFile;
 }
 
 /**
