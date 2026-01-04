@@ -1,5 +1,5 @@
 {
-  "name": "cordova-plugin-universal-links",
+  "name": "@thathoff/cordova-plugin-universal-links",
   "version": "0.3.1",
   "description": "Cordova plugin to add in your application support for Universal Links (iOS 9) and Deep Links (Android). Basically, open application through the link in the browser.",
   "cordova": {
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eldadfux/cordova-plugin-universal-links.git"
+    "url": "git+https://github.com/thathoff/cordova-plugin-universal-links.git"
   },
   "keywords": [
     "cordova",
@@ -45,7 +45,7 @@
   "author": "Nikolay Demyankov for Nordnet Bank AB",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/eldadfux/cordova-plugin-universal-links/issues"
+    "url": "https://github.com/thathoff/cordova-plugin-universal-links/issues"
   },
-  "homepage": "https://github.com/eldadfux/cordova-plugin-universal-links"
+  "homepage": "https://github.com/thathoff/cordova-plugin-universal-links"
 }
